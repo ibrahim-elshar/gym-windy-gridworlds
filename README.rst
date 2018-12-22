@@ -14,11 +14,14 @@ Install the `OpenAI gym <https://github.com/openai/gym>`_.
 Clone this repo: 
 
 .. code::
+
 		$ git clone https://github.com/ibrahim-elshar/gym-windy-gridworlds.git
+		
 
 Then install this package via
 
 .. code::
+
 		$ pip install -e .
 
 
