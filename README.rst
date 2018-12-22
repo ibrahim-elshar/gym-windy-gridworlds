@@ -9,15 +9,18 @@ compatible with `OpenAI gym <https://github.com/openai/gym>`_.
 
 Installation
 -------------
-Install the [OpenAI gym](https://gym.openai.com/docs/).
+Install the OpenAI-gym_.
+.. _OpenAI-gym: https://gym.openai.com/docs/ 
 
-Clone this repo: git clone https://github.com/ibrahim-elshar/Carsharing/gym_carsharing.git
-
+Clone this repo: 
+``
+git clone https://github.com/ibrahim-elshar/gym-windy-gridworlds.git
+``
 Then install this package via
 
-```
+``
 pip install -e .
-```
+``
 
 
 Usage
@@ -40,6 +43,8 @@ In the middle region the resultant next states are
 shifted upward by the "wind" which strength varies from column to column.
 The reward is -1 until goal state is reached.
 
+.. _book: http://incompleteideas.net/book/the-book-2nd.html
+
 ``StochWindyGridWorld-v0``
 ---------------------
 
@@ -50,8 +55,6 @@ By default, the probabilities are set uniformly such that a third of the
 time you move one cell according to the wind values as above, but also 
 a third of the time you move one cell above that, and another third of the 
 time you move one cell below that.
-
-.. _book: http://incompleteideas.net/book/the-book-2nd.html
 
 ``KingWindyGridworld-v0``
 ------------
