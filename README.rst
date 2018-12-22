@@ -9,7 +9,7 @@ compatible with `OpenAI gym <https://github.com/openai/gym>`_.
 
 Installation
 -------------
-Install the `OpenAI gym <https://github.com/openai/gym>`_.
+Install `OpenAI gym <https://github.com/openai/gym>`_.
 
 Clone this repo: 
 
@@ -53,7 +53,7 @@ The reward is -1 until goal state is reached.
 
 Stochastic Windy Gridworld is as described above. However,
 the effect of the wind "if there is any" is stochastic, sometimes varying
-by 1 from the mean value given for each column.
+by 1 from the value given for each column.
 By default, the probabilities are set uniformly such that a third of the 
 time you move one cell according to the wind values as above, but also 
 a third of the time you move one cell above that, and another third of the 
