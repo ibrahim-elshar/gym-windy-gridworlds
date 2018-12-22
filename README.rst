@@ -9,18 +9,18 @@ compatible with `OpenAI gym <https://github.com/openai/gym>`_.
 
 Installation
 -------------
-Install the OpenAI-gym_.
-.. _OpenAI-gym: https://gym.openai.com/docs/ 
+Install the `OpenAI gym <https://github.com/openai/gym>`_.
 
 Clone this repo: 
-``
-git clone https://github.com/ibrahim-elshar/gym-windy-gridworlds.git
-``
+
+.. code::
+		$ git clone https://github.com/ibrahim-elshar/gym-windy-gridworlds.git
+
 Then install this package via
 
-``
-pip install -e .
-``
+.. code::
+		$ pip install -e .
+
 
 
 Usage
