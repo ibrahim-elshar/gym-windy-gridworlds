@@ -7,6 +7,19 @@ from book `Reinforcement Learning: An Introduction
 <http://incompleteideas.net/book/the-book-2nd.html>`_
 compatible with `OpenAI gym <https://github.com/openai/gym>`_.
 
+Installation
+-------------
+Install the [OpenAI gym](https://gym.openai.com/docs/).
+
+Clone this repo: git clone https://github.com/ibrahim-elshar/Carsharing/gym_carsharing.git
+
+Then install this package via
+
+```
+pip install -e .
+```
+
+
 Usage
 -----
 
@@ -14,7 +27,7 @@ Usage
 
         $ import gym
         $ import gym_windy_gridworlds
-        $ env = gym.make('WindyGridWorldEnv-v0')  # substitute environment's name
+        $ env = gym.make('WindyGridWorldEnv-v0')  
 
 ``WindyGridWorld-v0``
 ----------------
