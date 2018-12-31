@@ -38,7 +38,7 @@ class WindyGridWorldEnv(gym.Env):
                 destination[self.actions['R']] = (max(i - self.wind[j], 0),\
                                                    min(j + 1, self.grid_width - 1))
                 self.action_destination[i,j]=destination
-                
+        self.nA = len(self.actions)        
         
     def step(self, action):
         """

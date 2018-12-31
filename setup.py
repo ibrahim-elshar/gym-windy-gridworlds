@@ -4,7 +4,7 @@ with open('README.rst') as f:
     long_description = ''.join(f.readlines())
 
 setup(name='gym_windy_gridworlds',
-      version='0.0.1',
+       version='0.0.1',
 	  description='Windy Gridworlds environments for OpenAI gym.',
 	  long_description=long_description,
 	  author='Ibrahim El Shar',
