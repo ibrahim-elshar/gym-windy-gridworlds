@@ -5,7 +5,7 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 import sys
-import collections
+
 
 class StochWindyGridWorldEnv(gym.Env):
     '''Creates the Stochastic Windy GridWorld Environment
@@ -81,20 +81,28 @@ class StochWindyGridWorldEnv(gym.Env):
                 self.P[s,a][np.unique(self.f[s,a,:])]= \
                 [list(self.f[s,a,:]).count(value)/float(len(self.f[s,a,:]))\
                       for value in np.unique(self.f[s,a,:])]
+        # absorption formulation gamma
+        self.gamma = 0.9
                 
-    def create_absorption_MDP_P(self, gamma):
+    def create_absorption_MDP_P(self):
+        
         self.P_new=np.zeros((self.nS+1,self.nA,self.nS+1))
-        self.P_new[:,:,self.nS] = 1- gamma
-        self.P_new[0:self.nS,:,0:self.nS] = gamma * self.P
+        self.P_new[:,:,self.nS] = 1- self.gamma
+        self.P_new[0:self.nS,:,0:self.nS] = self.gamma * self.P
         self.P_new[self.nS,:,self.nS] = 1
     
-    def _virtual_step_absorb(self, s,a,gamma,force_noise=None):
+    def _virtual_step_absorb(self, s,a,force_noise=None):
+        '''TODO'''
+        noise = force_noise if force_noise else self.np_random.choice(self.w_range, 1, p=self.probabilities)[0] 
+        wind = np.copy(self.wind)
+        wind[np.where( wind > 0 )] += noise  
+        if s==self.nS:
+            return  self.nS, 0, True, wind, noise        
         P=np.zeros((self.nS+1,self.nA,self.nS+1))
         if force_noise is None:
-            noise = self.np_random.choice(self.w_range, 1, p=self.probabilities)[0] 
             newS = self.f[s,a,noise]
-            P[s,a,newS]= gamma 
-            P[s,a,self.nS]= 1-gamma 
+            P[s,a,newS]= self.gamma 
+            P[s,a,self.nS]= 1-self.gamma 
             prob = P[s,a,np.nonzero(P[s,a,:])][0].tolist()
             destination = self.np_random.choice(np.append(newS,self.nS), 1,\
                                            p=prob)[0]
@@ -102,9 +110,11 @@ class StochWindyGridWorldEnv(gym.Env):
 #            prob = self.P_new[s,a,np.nonzero(self.P_new[s,a,:])][0].tolist()
 #            destination = self.np_random.choice(np.append(np.unique(self.f[s,a,:]),self.nS), 1,\
 #                                           p=prob)[0]
-            wind = np.copy(self.wind)
-            wind[np.where( wind > 0 )] += noise             
-            if destination ==  self.goal_state or destination ==  self.nS:
+           
+            if destination ==  self.goal_state:
+                reward = 0
+                isdone = False
+            elif destination ==  self.nS:  
                 reward = 0
                 isdone = True
             else:
@@ -114,18 +124,44 @@ class StochWindyGridWorldEnv(gym.Env):
         else: 
 #            noise = force_noise 
 #            newS = self.f[s,a,noise]
-#            P[s,a,newS]= gamma 
-#            P[s,a,self.nS]= 1-gamma 
+#            P[s,a,newS]= self.gamma 
+#            P[s,a,self.nS]= 1-self.gamma 
 #            prob = P[s,a,np.nonzero(P[s,a,:])][0].tolist()
 #            destination = self.np_random.choice(np.append(newS,self.nS), 1,\
 #                                           p=prob)[0]
-            return self._virtual_step_f( s, a, force_noise)
+            return self._virtual_step_f( s, a, noise)
+        
+    def simulate_sample_path(self):
+        '''TODO'''
+        tau = self.np_random.geometric(p=1-self.gamma, size=1)   
+        sample_path = self.np_random.choice(self.w_range, tau, p=self.probabilities)
+        return sample_path
+        
+    def step_absorb(self, action, force_noise=None):
+        """
+        Parameters
+        ----------
+        action : 0 = Up, 1 = Right, 2 = Down, 3 = Left
+
+        Returns
+        -------
+        ob, reward, episode_over, info : tuple
+            ob (object) :
+                 Agent current position in the grid.
+            reward (float) :
+                 Reward is -1 at every step except at goal state.
+            episode_over (bool) :
+                 True if the agent reaches the goal, False otherwise.
+            info (dict) :
+                 Contains the realized noise that is added to the wind in each 
+                 step. However, official evaluations of your agent are not 
+                 allowed to use this for learning.
+        """
+        assert self.action_space.contains(action)
+        self.observation, reward, isdone, wind, noise  = self._virtual_step_absorb(self.observation, action, force_noise)
+        self.realized_wind = wind
+        return self.observation, reward, isdone, {'noise':noise}    
                 
-        
-        
-    def relative_frequency(self, array, element):
-        count_dict = collections.Counter(array)        
-        return count_dict[element]/ float(len(array))                   
             
     def dim2to1(self, cell):
         '''Transforms the 2 dim position in a grid world to 1 state'''
