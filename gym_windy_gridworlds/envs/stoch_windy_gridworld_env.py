@@ -5,6 +5,7 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 import sys
+import collections
 
 class StochWindyGridWorldEnv(gym.Env):
     '''Creates the Stochastic Windy GridWorld Environment
@@ -19,7 +20,7 @@ class StochWindyGridWorldEnv(gym.Env):
                  REWARD = -1, RANGE_RANDOM_WIND=1,\
                  PROB=[1./3, 1./3, 1./3],\
                  NOISE_CASE = 1):
-        self.seed()
+    
         self.grid_height = GRID_HEIGHT
         self.grid_width = GRID_WIDTH
         self.grid_dimensions = (self.grid_height, self.grid_width)
@@ -32,12 +33,13 @@ class StochWindyGridWorldEnv(gym.Env):
         self.reward = REWARD
         self.range_random_wind = RANGE_RANDOM_WIND
         self.w_range = np.arange(-self.range_random_wind, self.range_random_wind + 1 )
-        self.probablities = PROB
-        self.w_prob = dict(zip(self.w_range, self.probablities))
+        self.probabilities = PROB
+        self.w_prob = dict(zip(self.w_range, self.probabilities))
         self.action_space =  spaces.Discrete(4)
         self.observation_space = spaces.Tuple((
                 spaces.Discrete(self.grid_height),
                 spaces.Discrete(self.grid_width)))
+        self.seed()
         self.actions = { 'U':0,   #up
                          'R':1,   #right
                          'D':2,   #down
@@ -72,9 +74,59 @@ class StochWindyGridWorldEnv(gym.Env):
                                                         self.grid_height - 1), 0), j))
                     self.f[s,self.actions['L'], w] = self.dim2to1((max(i - wind, 0),\
                                                        max(j - 1, 0)))
- 
-                    
+        # create transition probabilities           
+        self.P=np.zeros((self.nS,self.nA,self.nS)) 
+        for s in range(self.nS):
+            for a in range(self.nA):
+                self.P[s,a][np.unique(self.f[s,a,:])]= \
+                [list(self.f[s,a,:]).count(value)/float(len(self.f[s,a,:]))\
+                      for value in np.unique(self.f[s,a,:])]
+                
+    def create_absorption_MDP_P(self, gamma):
+        self.P_new=np.zeros((self.nS+1,self.nA,self.nS+1))
+        self.P_new[:,:,self.nS] = 1- gamma
+        self.P_new[0:self.nS,:,0:self.nS] = gamma * self.P
+        self.P_new[self.nS,:,self.nS] = 1
+    
+    def _virtual_step_absorb(self, s,a,gamma,force_noise=None):
+        P=np.zeros((self.nS+1,self.nA,self.nS+1))
+        if force_noise is None:
+            noise = self.np_random.choice(self.w_range, 1, p=self.probabilities)[0] 
+            newS = self.f[s,a,noise]
+            P[s,a,newS]= gamma 
+            P[s,a,self.nS]= 1-gamma 
+            prob = P[s,a,np.nonzero(P[s,a,:])][0].tolist()
+            destination = self.np_random.choice(np.append(newS,self.nS), 1,\
+                                           p=prob)[0]
+            
+#            prob = self.P_new[s,a,np.nonzero(self.P_new[s,a,:])][0].tolist()
+#            destination = self.np_random.choice(np.append(np.unique(self.f[s,a,:]),self.nS), 1,\
+#                                           p=prob)[0]
+            wind = np.copy(self.wind)
+            wind[np.where( wind > 0 )] += noise             
+            if destination ==  self.goal_state or destination ==  self.nS:
+                reward = 0
+                isdone = True
+            else:
+                reward = -1
+                isdone = False
+            return  destination, reward, isdone, wind, noise
+        else: 
+#            noise = force_noise 
+#            newS = self.f[s,a,noise]
+#            P[s,a,newS]= gamma 
+#            P[s,a,self.nS]= 1-gamma 
+#            prob = P[s,a,np.nonzero(P[s,a,:])][0].tolist()
+#            destination = self.np_random.choice(np.append(newS,self.nS), 1,\
+#                                           p=prob)[0]
+            return self._virtual_step_f( s, a, force_noise)
+                
         
+        
+    def relative_frequency(self, array, element):
+        count_dict = collections.Counter(array)        
+        return count_dict[element]/ float(len(array))                   
+            
     def dim2to1(self, cell):
         '''Transforms the 2 dim position in a grid world to 1 state'''
         return np.ravel_multi_index(cell, self.grid_dimensions)
@@ -91,10 +143,10 @@ class StochWindyGridWorldEnv(gym.Env):
         if force_noise is None:
             # case 1 where all wind tiles are affected by the same noise scalar, 
             # noise1 is a scalar value added to wind
-            noise1 = self.np_random.choice(self.w_range, 1, self.probablities)[0] 
+            noise1 = self.np_random.choice(self.w_range, 1, p=self.probabilities)[0] 
             # case 2  where each wind tile is affected by a different noise 
             # noise2 is a vector added to wind
-            noise2 = self.np_random.choice(self.w_range, self.num_wind_tiles, self.probablities)
+            noise2 = self.np_random.choice(self.w_range, self.num_wind_tiles, p=self.probabilities)
             noise = noise1 if self.noise_case==1 else noise2
         else:   
             noise = force_noise
@@ -127,7 +179,7 @@ class StochWindyGridWorldEnv(gym.Env):
         if force_noise is None:
             # case 1 where all wind tiles are affected by the same noise scalar, 
             # noise1 is a scalar value added to wind
-            noise = self.np_random.choice(self.w_range, 1, self.probablities)[0] 
+            noise = self.np_random.choice(self.w_range, 1, p=self.probabilities)[0] 
         else:   
             noise = force_noise 
         #print('noise=', noise)
