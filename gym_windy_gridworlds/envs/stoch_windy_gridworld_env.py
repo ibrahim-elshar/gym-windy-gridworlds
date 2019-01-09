@@ -17,10 +17,11 @@ class StochWindyGridWorldEnv(gym.Env):
     def __init__(self, GRID_HEIGHT=7, GRID_WIDTH=10,\
                  WIND = [0, 0, 0, 1, 1, 1, 2, 2, 1, 0], \
                  START_CELL = (3, 0), GOAL_CELL = (3, 7),\
-                 REWARD = -1, RANGE_RANDOM_WIND=1,\
-                 PROB=[1./3, 1./3, 1./3],\
-                 NOISE_CASE = 1):
-    
+                 REWARD = -1, RANGE_RANDOM_WIND=2,\
+                 PROB=[0.35, 0.1, 0.1, 0.1, 0.35],\
+                 NOISE_CASE = 1,
+                 SIMULATOR_SEED = 3323):
+        self.prng_simulator = np.random.RandomState(SIMULATOR_SEED) #Pseudorandom number generator
         self.grid_height = GRID_HEIGHT
         self.grid_width = GRID_WIDTH
         self.grid_dimensions = (self.grid_height, self.grid_width)
@@ -63,16 +64,19 @@ class StochWindyGridWorldEnv(gym.Env):
                     self.f[s,self.actions['L'], w] = self.goal_state                    
                 else:
                     i, j = self.dim1to2(s)
+#                    print(i,j)
+                    
                     if self.wind[j] != 0: 
-                        wind = self.wind[j] + w - 1
+                        wind = self.wind[j] + w - self.range_random_wind
+#                        print('wind=',wind)
                     else: 
                         wind = 0
                     self.f[s,self.actions['U'], w] = self.dim2to1((max(i - 1 - wind, 0), j))
-                    self.f[s,self.actions['R'], w] = self.dim2to1((max(i - wind, 0),\
+                    self.f[s,self.actions['R'], w] = self.dim2to1((min(max(i - wind, 0),self.grid_height - 1),\
                                                        min(j + 1, self.grid_width - 1)))
                     self.f[s,self.actions['D'], w] = self.dim2to1((max(min(i + 1 - wind, \
                                                         self.grid_height - 1), 0), j))
-                    self.f[s,self.actions['L'], w] = self.dim2to1((max(i - wind, 0),\
+                    self.f[s,self.actions['L'], w] = self.dim2to1((min(max(i - wind, 0),self.grid_height - 1),\
                                                        max(j - 1, 0)))
         # create transition probabilities           
         self.P=np.zeros((self.nS,self.nA,self.nS)) 
@@ -85,7 +89,7 @@ class StochWindyGridWorldEnv(gym.Env):
         self.gamma = 0.9
                 
     def create_absorption_MDP_P(self):
-        
+        '''TODO'''
         self.P_new=np.zeros((self.nS+1,self.nA,self.nS+1))
         self.P_new[:,:,self.nS] = 1- self.gamma
         self.P_new[0:self.nS,:,0:self.nS] = self.gamma * self.P
@@ -101,11 +105,11 @@ class StochWindyGridWorldEnv(gym.Env):
         P=np.zeros((self.nS+1,self.nA,self.nS+1))
         if force_noise is None:
             newS = self.f[s,a,noise]
+            # P(s' | w) = 1_{s'=f(s,a,w)} x Gamma + 1_{s'=new_absorb_state} x 1- Gamma
             P[s,a,newS]= self.gamma 
             P[s,a,self.nS]= 1-self.gamma 
             prob = P[s,a,np.nonzero(P[s,a,:])][0].tolist()
-            destination = self.np_random.choice(np.append(newS,self.nS), 1,\
-                                           p=prob)[0]
+            destination = self.np_random.choice(np.append(newS,self.nS), 1, p=prob)[0]
             
 #            prob = self.P_new[s,a,np.nonzero(self.P_new[s,a,:])][0].tolist()
 #            destination = self.np_random.choice(np.append(np.unique(self.f[s,a,:]),self.nS), 1,\
@@ -133,8 +137,8 @@ class StochWindyGridWorldEnv(gym.Env):
         
     def simulate_sample_path(self):
         '''TODO'''
-        tau = self.np_random.geometric(p=1-self.gamma, size=1)   
-        sample_path = self.np_random.choice(self.w_range, tau, p=self.probabilities)
+        tau = self.prng_simulator.geometric(p=1-self.gamma, size=1)   
+        sample_path = self.prng_simulator.choice(self.w_range, tau, p=self.probabilities)
         return sample_path
         
     def step_absorb(self, action, force_noise=None):
@@ -192,12 +196,12 @@ class StochWindyGridWorldEnv(gym.Env):
         ##############
         destination = dict()
         destination[self.actions['U']] = self.dim2to1((max(i - 1 - wind[j], 0), j))
-        destination[self.actions['R']] = self.dim2to1((max(i - wind[j], 0),\
-                                           min(j + 1, self.grid_width - 1)))
+        destination[self.actions['R']] = self.dim2to1((min(max(i - wind, 0),self.grid_height - 1),\
+                                                       min(j + 1, self.grid_width - 1)))
         destination[self.actions['D']] = self.dim2to1((max(min(i + 1 - wind[j], \
                                             self.grid_height - 1), 0), j))
-        destination[self.actions['L']] = self.dim2to1((max(i - wind[j], 0),\
-                                               max(j - 1, 0)))
+        destination[self.actions['L']] = self.dim2to1((min(max(i - wind, 0),self.grid_height - 1),\
+                                                       max(j - 1, 0)))
 
         if state ==  self.goal_state: destination[action] = self.goal_state
         if destination[action] ==  self.goal_state:
