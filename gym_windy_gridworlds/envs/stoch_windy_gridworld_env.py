@@ -89,6 +89,21 @@ class StochWindyGridWorldEnv(gym.Env):
         # absorption formulation gamma
         self.gamma = GAMMA
         
+        # creates a table that returns probabilities, next states, rewards, isdone (0 False, 1 True)
+        self.trans=np.empty((self.nS,self.nA), dtype=object)
+        for s in range(self.nS):
+            for a in range(self.nA):
+                self.trans[s,a] = np.vstack((self.P[s,a,np.where(self.P[s,a]!=0)][0],\
+                          np.where(self.P[s,a]!=0)[0],self.reward_func(s, a), np.where(self.P[s,a]!=0)[0]==self.goal_state)).T
+        
+    def reward_func(self,state, action):
+        next_states = np.unique(self.f[state, action, :])
+        reward = np.ones(len(next_states)) * -1
+        reward[np.where(next_states == self.goal_state)] = 0
+#        if state==self.goal_state: 
+#            reward = np.zeros(len(next_states))
+        return reward   
+    
     def f(self, s, a, w):
         return self.f[s, a, w + self.range_random_wind]
                
@@ -109,16 +124,21 @@ class StochWindyGridWorldEnv(gym.Env):
         P=np.zeros((self.nS+1,self.nA,self.nS+1))
         if force_noise is None:
             newS = self.f[s,a,noise + self.range_random_wind]
-            print(newS)
+#            print(newS)
             # P(s' | w) = 1_{s'=f(s,a,w)} x Gamma + 1_{s'=new_absorb_state} x 1- Gamma
             P[s,a,newS]= self.gamma 
-            P[s,a,self.nS]= 1-self.gamma 
+            P[s,a,self.nS]= 1.0-self.gamma 
+#            print(self.gamma)
+#            print(1-self.gamma)
+#            print(P[s,a,self.nS])
+#            print(np.nonzero(P[s,a,:]))
             prob = P[s,a,np.nonzero(P[s,a,:])][0].tolist()
+#            print(prob)
             destination = self.np_random.choice(np.append(newS,self.nS), 1, p=prob)[0]
             
 #            prob = self.P_new[s,a,np.nonzero(self.P_new[s,a,:])][0].tolist()
 #            destination = self.np_random.choice(np.append(np.unique(self.f[s,a,:]),self.nS), 1,\
-#                                           p=prob)[0]
+#                                           p=prob)[0] # TODO check unique here makes the array sorted
            
             if destination ==  self.goal_state:
                 reward = 0
@@ -138,7 +158,7 @@ class StochWindyGridWorldEnv(gym.Env):
 #            prob = P[s,a,np.nonzero(P[s,a,:])][0].tolist()
 #            destination = self.np_random.choice(np.append(newS,self.nS), 1,\
 #                                           p=prob)[0]
-            return self._virtual_step_f( s, a, noise)
+            return self._virtual_step_f( s, a, force_noise=noise)
         
     def simulate_sample_path(self):
         '''TODO'''
@@ -231,7 +251,11 @@ class StochWindyGridWorldEnv(gym.Env):
         wind = np.copy(self.wind)
         wind[np.where( wind > 0 )] += noise         
         destination = self.f[state, action, noise + self.range_random_wind]
-        if destination ==  self.goal_state:
+        #if destination ==  self.goal_state:
+        if state ==self.goal_state and destination ==  self.goal_state:
+            reward = 0 ########################################### 0 before
+            isdone = True
+        elif state !=self.goal_state and destination ==  self.goal_state:
             reward = 0
             isdone = True
         else:
