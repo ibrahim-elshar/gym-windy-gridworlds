@@ -33,7 +33,7 @@ Usage
 
         $ import gym
         $ import gym_windy_gridworlds
-        $ env = gym.make('WindyGridWorldEnv-v0')  
+        $ env = gym.make('WindyGridWorld-v0')  
 
 ``WindyGridWorld-v0``
 ----------------
