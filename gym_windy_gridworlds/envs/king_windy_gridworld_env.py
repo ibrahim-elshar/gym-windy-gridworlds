@@ -16,6 +16,7 @@ class KingWindyGridWorldEnv(gym.Env):
         self.wind = WIND
         self.start_state = START_STATE
         self.goal_state = GOAL_STATE
+        self.observation = START_STATE
         self.reward = REWARD
         self.action_space =  spaces.Discrete(8)
         self.observation_space = spaces.Tuple((
